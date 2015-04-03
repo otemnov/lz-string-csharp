@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 
-
 namespace lz_string_csharp
 {
-       public class LZString
+    public class LZString
     {
 
         private class Context_Compress
@@ -625,74 +624,58 @@ namespace lz_string_csharp
 
         public static string decompressFromBase64(string input)
         {
+	        if (input == null)
+	        {
+				throw new ArgumentNullException("input");
+	        }
 
-            string _keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-
-            string output = "";
+            const string keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+			var output = new StringBuilder();
             int output_ = 0;
             int ol = 0;
-            int chr1, chr2, chr3 = 0;
-            int enc1, enc2, enc3, enc4 = 0;
-            int i = 0;
+	        int i = 0;
 
-            try
-            {
-                if (input == null)
-                    throw new Exception("input is Null");
+	        while (i < input.Length)
+	        {
+		        int enc1 = keyStr.IndexOf(input[i++]);
+		        int enc2 = keyStr.IndexOf(input[i++]);
+		        int enc3 = keyStr.IndexOf(input[i++]);
+		        int enc4 = keyStr.IndexOf(input[i++]);
 
-                var regex = new Regex(@"[^A-Za-z0-9-\+\/\=]");
-                input = regex.Replace(input, "");
+		        int chr1 = (enc1 << 2) | (enc2 >> 4);
+		        int chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+		        int chr3 = ((enc3 & 3) << 6) | enc4;
 
-                while (i < input.Length)
-                {
-                    enc1 = _keyStr.IndexOf(input[i++]);
-                    enc2 = _keyStr.IndexOf(input[i++]);
-                    enc3 = _keyStr.IndexOf(input[i++]);
-                    enc4 = _keyStr.IndexOf(input[i++]);
+		        if (ol % 2 == 0)
+		        {
+			        output_ = chr1 << 8;
 
-                    chr1 = (enc1 << 2) | (enc2 >> 4);
-                    chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
-                    chr3 = ((enc3 & 3) << 6) | enc4;
+			        if (enc3 != 64)
+			        {
+				        output.Append((char)(output_ | chr2));
+			        }
 
-                    if (ol % 2 == 0)
-                    {
-                        output_ = chr1 << 8;
+			        if (enc4 != 64)
+			        {
+				        output_ = chr3 << 8;
+			        }
+		        }
+		        else
+		        {
+			        output.Append((char)(output_ | chr1));
 
-                        if (enc3 != 64)
-                        {
-                            output += (char)(output_ | chr2);
-                        }
-
-                        if (enc4 != 64)
-                        {
-                            output_ = chr3 << 8;
-                        }
-                    }
-                    else
-                    {
-                        output = output + (char)(output_ | chr1);
-
-                        if (enc3 != 64)
-                        {
-                            output_ = chr2 << 8;
-                        }
-                        if (enc4 != 64)
-                        {
-                            output += (char)(output_ | chr3);
-                        }
-                    }
-                    ol += 3;
-                }
-
-                // Send the output out to the main decompress function
-                output = decompress(output);
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-
-            return output;
+			        if (enc3 != 64)
+			        {
+				        output_ = chr2 << 8;
+			        }
+			        if (enc4 != 64)
+			        {
+				        output.Append((char)(output_ | chr3));
+			        }
+		        }
+		        ol += 3;
+	        }
+	        return decompress(output.ToString());
         }
 
     }
