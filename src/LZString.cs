@@ -62,7 +62,7 @@ namespace lz_string_csharp
 	        public DecompressData(string compressed, int resetValue, Func<int, int> getNextValue)
 			{
 				Comptessed = compressed;
-				val = getNextValue(compressed[0]);
+				val = getNextValue(0);
 				position = resetValue;
 				index = 1;
 			}
@@ -72,7 +72,7 @@ namespace lz_string_csharp
             public int position { get; set; }
             public int index { get; set; }
         }
-
+		#region Compress
 		private static ContextCompressData writeBit(int value, byte bitsPerChar, ContextCompressData data, Func<int, char> getCharFromInt)
         {
             data.val = (data.val << 1) | value;
@@ -127,7 +127,7 @@ namespace lz_string_csharp
             return context;
         }
 
-		private static string compress(string uncompressed, byte bitsPerChar, Func<int, char> getCharFromInt)
+		private static StringBuilder compress(string uncompressed, byte bitsPerChar, Func<int, char> getCharFromInt)
         {
             var context = new ContextCompress();
             for (int i = 0; i < uncompressed.Length; i++)
@@ -174,10 +174,35 @@ namespace lz_string_csharp
 				context.Data.position++;
 			}
 
-			return context.Data.str.ToString();
+			return context.Data.str;
         }
+		
+		public static string CompressToBase64(string input)
+		{
+			if (input == null)
+			{
+				throw new ArgumentNullException("input");
+			}
+			const string keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+			StringBuilder res = compress(input, 6, x => keyStr[x]);
+			switch (res.Length % 4)
+			{
+				case 1:
+					res.Append("===");
+					break;
+				case 2:
+					res.Append("==");
+					break;
+				case 3:
+					res.Append("=");
+					break;
+			}
+			return res.ToString();
+		}
 
-        private static int readBit(int resetValue, Func<int, int> getNextValue, DecompressData data)
+		#endregion
+		#region Decompress
+		private static int readBit(int resetValue, Func<int, int> getNextValue, DecompressData data)
         {
             var res = data.val & data.position;
             data.position >>= 1;
@@ -203,7 +228,7 @@ namespace lz_string_csharp
             return res;
         }
 
-		public static string decompress(string compressed, int resetValue, Func<int, int> getNextValue)
+		private static string decompress(string compressed, int resetValue, Func<int, int> getNextValue)
         {
 			var data = new DecompressData(compressed, resetValue, getNextValue);
             var dictionary = new List<string>();
@@ -270,7 +295,7 @@ namespace lz_string_csharp
                     }
 
 	                string entry;
-					if (dictionary.Count - 1 >= c) // if (dictionary[c] ) <------- original Javascript Equivalant
+					if (dictionary.Count - 1 >= c) 
                     {
                         entry = dictionary[c];
                     }
@@ -304,27 +329,7 @@ namespace lz_string_csharp
             }
         }
 
-	    public static string compressToBase64(string input)
-	    {
-		    if (input == null)
-		    {
-			    throw new ArgumentNullException("input");
-		    }
-		    const string keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-			string res = compress(input, 6, x => keyStr[x]);
-		    switch (res.Length % 4)
-		    {
-				case 1:
-					return res + "===";
-			    case 2:
-					return res + "==";
-			    case 3:
-					return res + "=";
-		    }
-			return res;
-        }
-
-		public static string decompressFromBase64(string input)
+		public static string DecompressFromBase64(string input)
         {
 	        if (input == null)
 	        {
@@ -333,8 +338,7 @@ namespace lz_string_csharp
 
             const string keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
 			return decompress(input, 32, x => keyStr.IndexOf(input[x]));
-        }
-
-    }
-
+		}
+		#endregion
+	}
 }
